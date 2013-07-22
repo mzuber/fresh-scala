@@ -55,7 +55,8 @@ object Fresh {
     def freshfor[B](expr: B): Boolean = true
 
     /**
-      * A textual representation of this name in the form of `name_`''n'', for ''n'' = 0, 1, 2, ...
+      * A textual representation of this name in the form of `name_`''n'',
+      * with distinct atoms getting distinct numbers ''n''.
       */
     override def toString: String = "name_" + atom
   }
@@ -70,7 +71,13 @@ object Fresh {
   /**
     * A class for abstractions.
     */
-  class Abstraction[A, B](boundName: Name[A], expr: B)
+  class Abstraction[A, B](boundName: Name[A], expr: B) {
+
+    /**
+      * Concrete this abstraction at a (fresh) atom.
+      */
+    def concreteAt(atom: Name[A]): B = swap(boundName, atom, expr)
+  }
 
 
   /**
@@ -99,6 +106,19 @@ object Fresh {
       // call a macro which performs the corresponding transformations
       patterns(expr) // Temporary dummy for the type checker
     }
+  }
+
+
+  /**
+    * A class for determining structural equality of two expressions.
+    */
+  implicit class StructuralEquality[A](expr: A) {
+
+    /**
+      * Test if this expression is structurally equal to that
+      * expression, i.e., check for object-level α-equivalence.
+      */
+    def ~(that: A): Boolean = true
   }
 
 }
