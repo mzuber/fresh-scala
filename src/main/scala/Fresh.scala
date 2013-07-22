@@ -29,7 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import NameSupply.freshName
+import AtomSupply.freshAtom
 
 /**
   * Define object-level syntax modulo α-equivalence in Scala.
@@ -37,41 +37,40 @@ import NameSupply.freshName
 object Fresh {
 
   /**
-    * A class for atoms, i.e., the atomic unit for fresh names.
-    *
-    * Each instance of this class encapulates a unique name.
+    * A value class for atoms, i.e., the atomic unit for fresh names.
     */
-  class Atom {
-    private val atom: String = freshName("name_")
-
-    override def toString: String = atom
+  class Atom(val atom: Int) extends AnyVal {
+    override def toString = atom.toString
   }
+
 
   /**
     * A class for bindable names in the object language.
     */
-  case class Name[T](atom: Atom) {
+  case class Name[A](atom: Atom) {
 
     /**
-      * Check, if this bindable name occurs in the algebraic suport of the given expression.
+      * Check, if this bindable name occurs in the algebraic support of the given expression.
       */
-    def freshfor[S](expr: S): Boolean = true
+    def freshfor[B](expr: B): Boolean = true
+
+    /**
+      * A textual representation of this name in the form of `name_`''n'', for ''n'' = 0, 1, 2, ...
+      */
+    override def toString: String = "name_" + atom
   }
 
 
   /**
-    * Create a fresh bindable name.
+    * Create a fresh bindable name with a unique atom.
     */
-  def fresh[T](): Name[T] = Name[T](new Atom)
+  def fresh[A](): Name[A] = Name[A](freshAtom())
 
 
   /**
     * A class for abstractions.
     */
-  class Abstraction[S, T](boundName: Name[S], expr: T) {
-
-    // TODO: Some magic unapply function
-  }
+  class Abstraction[A, B](boundName: Name[A], expr: B)
 
 
   /**
@@ -79,8 +78,27 @@ object Fresh {
     *
     * Interchange all occurrences of the given atoms in the given expression.
     */
-  def swap[S, T](name: Name[S], and: Name[S], in: T) = {
+  def swap[A, B](name: Name[A], and: Name[A], in: B): B = {
+    // Macro magic ftw
+    in // Temporary dummy for the type checker
+  }
 
+
+  /**
+    * An class for pattern matching over abstractions.
+    *
+    * This implicit class allows the user to define a match statement
+    * over abstractions values in the regular, infix fashion.
+    */
+  implicit class FreshMatch[A](expr: A) {
+    
+    /**
+      *  Pattern matching over abstraction values.
+      */
+    def freshMatch[B](patterns: PartialFunction[A, B]): B = {
+      // call a macro which performs the corresponding transformations
+      patterns(expr) // Temporary dummy for the type checker
+    }
   }
 
 }

@@ -29,27 +29,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import Fresh.Atom
 
 /**
-  * A supply for fresh names.
+  * A supply for fresh atoms.
   */
-object NameSupply {
+object AtomSupply {
 
-  private var index = 0
+  private var atom = 0
 
   /**
-    * Generate fresh names using the given prefix.
+    * Generate a fresh atom.
     */
-  def freshName(prefix: String): String = {
-    val idx = index
-    index += 1
-    prefix + idx
+  def freshAtom(): Atom = {
+    val idx = atom
+    atom += 1
+    new Atom(idx)
   }
 
   /**
-    * Reset the name supply.
+    * Reset the atom supply.
     *
     * For testing purposes only!
     */
-  def reset() = index = 0
+  def reset() = atom = 0
 }
