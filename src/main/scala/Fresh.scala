@@ -85,9 +85,24 @@ object Fresh {
     *
     * Interchange all occurrences of the given atoms in the given expression.
     */
-  def swap[A, B](name: Name[A], and: Name[A], in: B): B = {
+  def swap[A, B](name1: Name[A], name2: Name[A], expr: B): B = {
     // Macro magic ftw
-    in // Temporary dummy for the type checker
+    expr // Temporary dummy for the type checker
+  }
+
+
+  /**
+    * Swap multiple names in an expression.
+    *
+    * Both lists must be of the same length.
+    *
+    * @return The value formed by swapping the first element of 'names1' with the
+    *         first element of 'names2' throughout the given expression, and so
+    *         forth to the end of the lists.
+    */
+  def swap[A, B](names1: List[Name[A]], names2: List[Name[A]], expr: B): B = {
+    // Macro magic ftw
+    expr // Temporary dummy for the type checker
   }
 
 
