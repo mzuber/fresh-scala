@@ -51,6 +51,8 @@ object Fresh {
 
     /**
       * Check, if this bindable name occurs in the algebraic support of the given expression.
+      *
+      * This method provides a 'not-a-free-variable-off' test for object-level terms.
       */
     def freshfor[B](expr: B): Boolean = true
 
@@ -71,7 +73,7 @@ object Fresh {
   /**
     * A class for abstractions.
     */
-  class Abstraction[A, B](boundName: Name[A], expr: B) {
+  case class Abstraction[A, B](boundName: Name[A], expr: B) {
 
     /**
       * Concrete this abstraction at a (fresh) atom.
