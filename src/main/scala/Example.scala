@@ -64,10 +64,9 @@ object Example {
     */
   def subst(e1: Term, x: Name[Var], e2: Term): Term = e2 freshMatch {
     case Variable(y) => if (x == y) e1 else Variable(y)
-    case Function(Abstraction(y, e)) => Function(Abstraction(y, subst(e1, x, e)))
+    case Function(Abstraction(y, e)) => Function(<<(y)>> subst(e1, x, e))
     case Application(f, e) => Application(subst(e1, x, f), subst(e1, x, e))
-    case LetFunction(Abstraction(f, (Abstraction(y, e), body))) => {
-      LetFunction(Abstraction(f, (Abstraction(y, subst(e1, x, e)), subst(e1, x, body))))
-    }
+    case LetFunction(Abstraction(f, (Abstraction(y, e), body))) =>
+      LetFunction(<<(f)>> (<<(y)>> subst(e1, x, e), subst(e1, x, body)))
   }
 }

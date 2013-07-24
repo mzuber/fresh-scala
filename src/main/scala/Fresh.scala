@@ -83,6 +83,30 @@ object Fresh {
 
 
   /**
+    * Syntactic sugar for defining abstraction values.
+    *
+    * This class allows the user to define abstraction values using a syntax close
+    * to the one found in the FreshML language, i.e.,
+    * {{{
+    * val expr: B = ...
+    * val x: Name[A] = fresh()
+    * val abs: Abstraction[A, B] = <<(x)>> expr
+    * }}}
+    */
+  case class AbstractionBuilder[A](name: Name[A]) {
+    def >>[B](expr: B): Abstraction[A, B] = Abstraction[A, B](name, expr)
+  }
+
+  /**
+    * Syntactic sugar for defining abstraction values.
+    *
+    * This method lifts a name into an AbstractionBuilder, which can be used to
+    * define an abstraction using a syntax close to the one found in the FreshML language.
+    */
+  def <<[A](name: Name[A]): AbstractionBuilder[A] = AbstractionBuilder[A](name)
+
+
+  /**
     * Swap bindable names in an expression.
     *
     * Interchange all occurrences of the given atoms in the given expression.
