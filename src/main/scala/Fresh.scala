@@ -111,27 +111,18 @@ object Fresh {
   /**
     * Swap bindable names in an expression.
     *
-    * Interchange all occurrences of the given atoms in an expression which evaluates to a value.
+    * Interchange all occurrences of the given atoms in an expression, i.e.,
+    * replace every occurrence of the first atom with the second one and vice versa.
     */
-  def swap[A, B](name1: Name[A], name2: Name[A], value: B): B = {
-    /* Swapping in abstractions */
-    if (expr.isInstanceOf[Abstraction[A, B]]) {
-      val Abstraction(name, e) = expr.asInstanceOf[Abstraction[A, B]]
-      // ...
+  def swap[A, B](a: Name[A], b: Name[A], expr: B): B = {
+    // Define a Kiama strategy which replaces every atom `a' with `b' and every atom `b' with `a'
+    val swap = rule {
+      case atom: Name[A] if atom == a => b
+      case atom: Name[A] if atom == b => a
     }
-    expr // Temporary dummy for the type checker
-  }
-
-
-  /**
-    * Replace every occurrence of the atom 'a' with the atom 'b' in the given expression.
-    */
-  private def replace[A, B](a: Name[A], b: Name[A], expr: B): B = {
-    // Define a Kiama strategy which replaces every atom `a' with `b'
-    val replace = rule { case atom: Name[A] if atom == a => b }
 
     // Apply the strategy to the given expression and make shure the result has type B
-    replace(expr).getOrElse(expr) match {
+    swap(expr).getOrElse(expr) match {
       case expr: B @unchecked => expr
     }
   }
