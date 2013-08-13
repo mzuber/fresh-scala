@@ -80,7 +80,7 @@ object Example {
     * This implementation doesn't make use of abstraction patterns, but
     * performs the freshening of the bound names explicitly.
     */
-  def substExpl(e1: Term, x: Name[Var], e2: Term): Term = e2 freshMatch {
+  def substExpl(e1: Term, x: Name[Var], e2: Term): Term = e2 match {
     case Variable(y) => if (x == y) e1 else Variable(y)
     case Function(Abstraction(y, e)) => {
       val z: Name[Var] = fresh()
