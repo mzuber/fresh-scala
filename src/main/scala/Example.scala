@@ -69,4 +69,28 @@ object Example {
     case LetFunction(Abstraction(f, (Abstraction(y, e), body))) =>
       LetFunction(<<(f)>> (<<(y)>> subst(e1, x, e), subst(e1, x, body)))
   }
+
+
+  /**
+    * Capture-avoiding substitution (explicit version).
+    *
+    * This method computes (a representation of) the object-level term
+    * obtained by capture-avoiding substitution of the term 'e1' for all
+    * free occurrences of the variable 'x' in the term 'e2'.
+    * This implementation doesn't make use of abstraction patterns, but
+    * performs the freshening of the bound names explicitly.
+    */
+  def substExpl(e1: Term, x: Name[Var], e2: Term): Term = e2 freshMatch {
+    case Variable(y) => if (x == y) e1 else Variable(y)
+    case Function(Abstraction(y, e)) => {
+      val z: Name[Var] = fresh()
+      swap(z, y, Function(<<(y)>> substExpl(e1, x, e)))
+    }
+    case Application(f, e) => Application(substExpl(e1, x, f), substExpl(e1, x, e))
+    case LetFunction(Abstraction(f, (Abstraction(y, e), body))) => {
+      val g: Name[Var] = fresh()
+      val z: Name[Var] = fresh()
+      swap(g, f, LetFunction(<<(f)>> swap(z, y, (<<(y)>> substExpl(e1, x, e), substExpl(e1, x, body)))))
+    }
+  }
 }
