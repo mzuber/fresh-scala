@@ -144,8 +144,13 @@ object Fresh {
     *         forth to the end of the lists.
     */
   def swap[A, B](names1: List[Name[A]], names2: List[Name[A]], expr: B): B = {
-    // Macro magic ftw
-    expr // Temporary dummy for the type checker
+    val names = names1 zip names2
+    
+    /*
+     * Swap atoms in the given lists from left to right, i.e.,
+     * ... swap(..., ..., swap(a2, b2, swap(a1, b1, expr)
+     */
+    names.foldLeft(expr){ case (expr, (a, b)) => swap(a, b, expr) }
   }
 
 
