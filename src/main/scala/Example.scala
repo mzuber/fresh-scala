@@ -48,7 +48,7 @@ object Example {
     * Using bindable names allows us to define α-equivalence
     * classes of the languages abstract syntax trees.
     */
-  abstract class Term
+  sealed abstract class Term
   case class Variable(name: Name[Var]) extends Term                                              /* x */
   case class Function(function: Abstraction[Var, Term]) extends Term                             /* fn x => e */
   case class Application(function: Term, argument: Term) extends Term                            /* e1 e2 */
@@ -92,5 +92,35 @@ object Example {
       val z: Name[Var] = fresh()
       LetFunction(<<(g)>> swap(g, f, (<<(z)>> swap(z, y, substExpl(e1, x, e)), substExpl(e1, x, body))))
     }
+  }
+
+
+  /**
+    * Structural equality of two terms.
+    */
+  def eq(e1: Term, e2: Term): Boolean = (e1, e2) freshMatch {
+    case (Variable(x), Variable(y)) => x == y
+    case (Function(Abstraction(x1, e1)), Function(Abstraction(x2, e2))) => eq(swap(x1, x2, e1), e2)
+    case (Application(f1, e1), Application(f2, e2)) => eq(f1, f2) && eq(e1, e2)
+    case (LetFunction(Abstraction(f1, (Abstraction(x1, e1), b1))), LetFunction(Abstraction(f2, (Abstraction(x2, e2), b2)))) =>
+      eq(swap(f1, f2, swap(x1, x2, e1)), e2) && eq(swap(f1, f2, b1), b2)
+    case _ => false
+  }
+
+
+
+  def test() = {
+    val x: Name[Var] = fresh()
+    val y: Name[Var] = fresh()
+
+    val fst = Function(<<(x)>> Function(<<(y)>> Variable(x)))
+    val e0 = Function(<<(y)>> Variable(x))
+    val e1 = Function(<<(x)>> Function(<<(x)>> Application(Variable(x), Variable(x))))
+    val e2 = Function(<<(x)>> Function(<<(y)>> Application(Variable(x), Variable(x))))
+    val e3 = Function(<<(x)>> Function(<<(y)>> Application(Variable(y), Variable(y))))
+
+    println("substExpl(Variable(y), x, e0) = " + substExpl(Variable(y), x, e0))
+    println("eq(e1, e2) = " + eq(e1, e2))
+    println("eq(e1, e3) = " + eq(e1, e3))
   }
 }
