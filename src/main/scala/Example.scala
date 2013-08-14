@@ -84,13 +84,13 @@ object Example {
     case Variable(y) => if (x == y) e1 else Variable(y)
     case Function(Abstraction(y, e)) => {
       val z: Name[Var] = fresh()
-      swap(z, y, Function(<<(y)>> substExpl(e1, x, e)))
+      Function(<<(z)>> swap(z, y, substExpl(e1, x, e)))
     }
     case Application(f, e) => Application(substExpl(e1, x, f), substExpl(e1, x, e))
     case LetFunction(Abstraction(f, (Abstraction(y, e), body))) => {
       val g: Name[Var] = fresh()
       val z: Name[Var] = fresh()
-      swap(g, f, LetFunction(<<(f)>> swap(z, y, (<<(y)>> substExpl(e1, x, e), substExpl(e1, x, body)))))
+      LetFunction(<<(g)>> swap(g, f, (<<(z)>> swap(z, y, substExpl(e1, x, e)), substExpl(e1, x, body))))
     }
   }
 }
