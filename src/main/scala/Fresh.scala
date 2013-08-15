@@ -54,9 +54,12 @@ object Fresh {
     /**
       * Check, if this bindable name occurs in the algebraic support of the given expression.
       *
-      * This method provides a 'not-a-free-variable-off' test for object-level terms.
+      * This method provides a 'not-a-free-variable-of' test for object-level terms.
       */
-    def freshfor[B](expr: B): Boolean = true
+    def freshfor[B](expr: B): Boolean = {
+      // Use a macro to determine the free variables of the given expression and check if this name is one of them
+      true
+    }
 
     /**
       * A textual representation of this name in the form of `name_`''n'',
