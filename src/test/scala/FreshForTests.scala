@@ -35,7 +35,7 @@ import Fresh._
 import ObjectLanguage._
 
 /**
-  * Tests for the algebraic support of an expressions of the object-language.
+  * Tests for the algebraic support of expressions of the object-language.
   */
 class FreshForTests extends FunSuite {
 

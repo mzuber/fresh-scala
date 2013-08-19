@@ -57,8 +57,12 @@ object Fresh {
       * This method provides a 'not-a-free-variable-of' test for object-level terms.
       */
     def freshfor[B](expr: B): Boolean = {
-      // Use a macro to determine the free variables of the given expression and check if this name is one of them
-      true
+
+      def boundNames = collects {
+	case abstraction: Abstraction[A, _] => abstraction.boundName
+      }
+
+      boundNames(expr) contains this
     }
 
     /**
