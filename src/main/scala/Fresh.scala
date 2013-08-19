@@ -29,9 +29,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import scala.language.experimental.macros
+
 import org.kiama.rewriting.Rewriter._
 
 import AtomSupply.freshAtom
+import FreshMatchMacro.freshMatchImpl
 
 /**
   * Define object-level syntax modulo α-equivalence in Scala.
@@ -172,10 +175,9 @@ object Fresh {
     /**
       *  Pattern matching over abstraction values.
       */
-    def freshMatch[B](patterns: PartialFunction[A, B]): B = {
-      // call a macro which performs the corresponding transformations
-      patterns(expr) // Temporary dummy for the type checker
-    }
+    def freshMatch[B](patterns: PartialFunction[A, B]): B = patterns(expr) // freshMatchM(expr, patterns)
+
+    private def freshMatchM[A, B](expr: A, patterns: PartialFunction[A, B]): B = macro freshMatchImpl[A,B]
   }
 
 
