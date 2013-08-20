@@ -177,5 +177,5 @@ object Fresh {
     * Test if the first expression is structurally equal to the
     * second one, i.e., check for object-level α-equivalence.
     */
-  def ~[A](e1: A, e2: A): Boolean = macro structuralEqualityImpl[A]
+  def structuralEquality[A](e1: A, e2: A): Boolean = macro structuralEqualityImpl[A]
 }
