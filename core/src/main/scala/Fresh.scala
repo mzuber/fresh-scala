@@ -35,6 +35,7 @@ import org.kiama.rewriting.Rewriter._
 
 import AtomSupply.freshAtom
 import FreshMatchMacro.freshMatchImpl
+import StructuralEqualityMacro.structuralEqualityImpl
 
 /**
   * Define object-level syntax modulo α-equivalence in Scala.
@@ -165,32 +166,16 @@ object Fresh {
 
 
   /**
-    * An class for pattern matching over abstractions.
-    *
-    * This implicit class allows the user to define a match statement
-    * over abstractions values in the regular, infix fashion.
+    * Pattern matching over abstractions values.
     */
-  implicit class FreshMatch[A](expr: A) {
-    
-    /**
-      *  Pattern matching over abstraction values.
-      */
-    def freshMatch[B](patterns: PartialFunction[A, B]): B = patterns(expr) // freshMatchM(expr, patterns)
-
-    private def freshMatchM[A, B](expr: A, patterns: PartialFunction[A, B]): B = macro freshMatchImpl[A,B]
-  }
+  def freshMatch[A, B](expr: A)(patterns: PartialFunction[A, B]): B = macro freshMatchImpl[A,B]
 
 
   /**
-    * A class for determining structural equality of two expressions.
+    * Structural equality of two expressions.
+    *
+    * Test if the first expression is structurally equal to the
+    * second one, i.e., check for object-level α-equivalence.
     */
-  implicit class StructuralEquality[A](expr: A) {
-
-    /**
-      * Test if this expression is structurally equal to that
-      * expression, i.e., check for object-level α-equivalence.
-      */
-    def ~(that: A): Boolean = true
-  }
-
+  def ~[A](e1: A, e2: A): Boolean = macro structuralEqualityImpl[A]
 }
