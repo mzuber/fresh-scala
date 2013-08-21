@@ -5,11 +5,14 @@ object BuildSettings {
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := "0.1",
     scalaVersion := "2.10.2",
-    scalacOptions ++= Seq("-deprecation", "-feature"  /*, "-Ymacro-debug-lite" */)
+    scalacOptions ++= Seq("-deprecation", "-feature"  /*, "-Ymacro-debug-lite" */),
+    resolvers += Resolver.sonatypeRepo("snapshots"),
+    addCompilerPlugin("org.scala-lang.plugins" % "macro-paradise_2.10.2" % "2.0.0-SNAPSHOT")
   )
 }
 
 object Dependencies {
+  val reflect = (scalaVersion)("org.scala-lang" % "scala-reflect" % _)
   val scalatest = "org.scalatest" % "scalatest_2.10" % "2.0.M5b"
   val kiama = "com.googlecode.kiama" %% "kiama" % "1.5.1"
 }
@@ -31,6 +34,7 @@ object FreshScalaBuild extends Build {
       name := "fresh-scala",
       mainClass := None,
       parallelExecution in Test := false,
+      libraryDependencies <+= reflect,
       libraryDependencies += scalatest,
       libraryDependencies += kiama
     )
