@@ -98,7 +98,8 @@ object Example {
   /**
     * Structural equality of two terms.
     */
-  def eq(e1: Term, e2: Term): Boolean = freshMatch((e1, e2)){
+  @Fresh
+  def eq(e1: Term, e2: Term): Boolean = (e1, e2) match {
     case (Variable(x), Variable(y)) => x == y
     case (Function(Abstraction(x1, e1)), Function(Abstraction(x2, e2))) => eq(swap(x1, x2, e1), e2)
     case (Application(f1, e1), Application(f2, e2)) => eq(f1, f2) && eq(e1, e2)

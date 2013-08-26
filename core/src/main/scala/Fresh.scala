@@ -30,11 +30,13 @@
  */
 
 import scala.language.experimental.macros
+import scala.annotation.StaticAnnotation
 
 import org.kiama.rewriting.Rewriter._
 
 import AtomSupply.freshAtom
 import FreshMatchMacro.freshMatchImpl
+import FreshAnnotation.freshAnnotationImpl
 import StructuralEqualityMacro.structuralEqualityImpl
 
 /**
@@ -169,6 +171,14 @@ object Fresh {
     * Pattern matching over abstractions values.
     */
   def freshMatch[A, B](expr: A)(patterns: PartialFunction[A, B]): B = macro freshMatchImpl[A,B]
+
+
+  /**
+    * An annotation for pattern matching over abstraction values.
+    */
+  class Fresh extends StaticAnnotation {
+    def macroTransform(annottees: Any*) = macro freshAnnotationImpl
+  }
 
 
   /**
