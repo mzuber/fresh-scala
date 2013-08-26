@@ -34,14 +34,49 @@ import scala.reflect.macros.Context
 
 import Fresh._
 
+/**
+  * Macro implementation for pattern matching over abstraction values.
+  *
+  * This macro performs a syntax transformation for each regular
+  * case pattern into a case pattern with explicit swapping.
+  */
 object FreshMatchMacro {
 
-
+  /**
+    * Pattern matching over abstraction values.
+    *
+    * This macro performs explicit swapping for all abstraction patterns in a case pattern, i.e.,
+    * the pattern matching code
+    * {{{
+    * freshMatch(expr){
+    *   case Constructor(Abstraction(y, e)) => Abstraction(y, ... e ...)
+    * }
+    * }}}
+    * will be transformed into case patterns with explicit swapping:
+    * {{{
+    * expr match {
+    *   case Constructor(Abstraction(y, e)) => {
+    *     val z = fresh()
+    *     Abstraction(z, swap(z, y, ... e ...))
+    *   }
+    * }
+    * }}}
+    */
   def freshMatchImpl[A: c.WeakTypeTag, B: c.WeakTypeTag](c: Context)(expr: c.Expr[A])(patterns: c.Expr[PartialFunction[A, B]]): c.Expr[B] = {
     import c.universe._
 
-    // Dummy: patterns.apply(expr)
-    reify(patterns.splice(expr.splice))
+    /* Perform explicit swapping transformation on all case definitions */
+    val transformer = new Transformer {
+      override def transformCaseDefs(trees: List[CaseDef]) = trees map {
+	case caseDef => caseDef
+      }
+    }
+
+    /* Construct anonymus partial function with transformed case patterns */
+    val transformedPartialFunction = transformer.transform(patterns.tree)
+    println(show(transformedPartialFunction))
+
+     c.Expr[B](q"$transformedPartialFunction($expr)")
   }
 
 }
