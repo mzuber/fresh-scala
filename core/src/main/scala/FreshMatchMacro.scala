@@ -66,17 +66,61 @@ object FreshMatchMacro {
     import c.universe._
 
     /* Perform explicit swapping transformation on all case definitions */
-    val transformer = new Transformer {
+    val eplicitSwappingTransformer = new Transformer {
+
       override def transformCaseDefs(trees: List[CaseDef]) = trees map {
-	case caseDef => caseDef
+	case caseDef @ CaseDef(pattern, guard , body) => {
+	  /* Collect all pattern variables which are bound in an abstraction pattern */
+	  val boundPatternVarTraverser = new Traverser {
+
+	    var boundNames = List()
+
+	    override def traverse(tree: Tree) = tree match {
+	      case q"Fresh.Abstraction[$nameType, ${_}]($name, $body)" => {
+		// Note: quasi quotes do not work in this settint, we need to construct the tree to match against by hand 
+	      }
+	      case _ => super.traverse(tree)
+	    }
+	  }
+	  boundPatternVarTraverser.traverse(pattern)
+
+	  /*
+	   * Construct value definitions which generate fresh names for each bound
+	   * pattern variable, e.g., for the bound pattern variables `x' and `y' we
+	   * produce the following code block, where `z1' and `z2' are fresh variable
+	   * names:
+	   * {
+	   *   val z1: Name[A] = fresh()
+	   *   val z2: Name[A] = fresh()
+	   * }
+	   */
+
+	  /*
+	   * Transform the body of the case definition such that:
+	   * - Each of the names bound in an abstraction pattern will be associated
+	   *   with one of the freshly generated names.
+	   * - The expression of each abstraction value will be surrounded by a swap
+	   *   call which swaps the bound name with its corresponding fresh one.
+	   * If for example the bound pattern variable `x' is associated with a
+	   * fresh name stored in the variable `z', the expression
+	   * {
+	   *  Abstraction(x, e)
+	   * }
+	   * will be transformed into
+	   * {
+	   *  Abstraction(z, swap(z, x, e))
+	   * }
+	   */
+	  caseDef
+	}
       }
     }
 
     /* Construct anonymus partial function with transformed case patterns */
-    val transformedPartialFunction = transformer.transform(patterns.tree)
-    println(show(transformedPartialFunction))
+    val transformedPartialFunction = eplicitSwappingTransformer.transform(patterns.tree)
+    // println(show(transformedPartialFunction))
 
-     c.Expr[B](q"$transformedPartialFunction($expr)")
+    c.Expr[B](q"$transformedPartialFunction($expr)")
   }
 
 }
