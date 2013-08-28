@@ -83,13 +83,13 @@ object Example {
   def substExpl(e1: Term, x: Name[Var], e2: Term): Term = e2 match {
     case Variable(y) => if (x == y) e1 else Variable(y)
     case Function(Abstraction(y, e)) => {
-      val z: Name[Var] = fresh()
+      val z: Name[Var] = fresh() // Or: z.refresh()
       Function(<<(z)>> swap(z, y, substExpl(e1, x, e)))
     }
     case Application(f, e) => Application(substExpl(e1, x, f), substExpl(e1, x, e))
     case LetFunction(Abstraction(f, (Abstraction(y, e), body))) => {
-      val g: Name[Var] = fresh()
-      val z: Name[Var] = fresh()
+      val g: Name[Var] = fresh() // Or: f.refresh()
+      val z: Name[Var] = fresh() // Or: z.refresh()
       LetFunction(<<(g)>> swap(g, f, (<<(z)>> swap(z, y, substExpl(e1, x, e)), substExpl(e1, x, body))))
     }
   }

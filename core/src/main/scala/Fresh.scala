@@ -72,6 +72,12 @@ object Fresh {
     }
 
     /**
+      * Refresh this name, i.e., create a name with a fresh atom
+      * and the same type as this name.
+      */
+    def refresh(): Name[A] = fresh[A]()
+
+    /**
       * A textual representation of this name in the form of `name_`''n'',
       * with distinct atoms getting distinct numbers ''n''.
       */
