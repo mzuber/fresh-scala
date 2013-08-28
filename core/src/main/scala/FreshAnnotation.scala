@@ -29,6 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import scala.language.reflectiveCalls
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 
@@ -68,6 +69,70 @@ object FreshAnnotation {
 
     val definition = annottees.head.tree
     // println(showRaw(definition))
+
+    /* Perform explicit swapping transformation on all case definitions */
+    val eplicitSwappingTransformer = new Transformer {
+
+      override def transformCaseDefs(trees: List[CaseDef]) = trees map {
+	case CaseDef(pattern, guard , body) => {
+
+	  /* Collect all pattern variables which are bound in an abstraction pattern */
+	  val boundNameTraverser = new Traverser {
+
+	    var boundNames: List[Name] = List()
+
+	    override def traverse(tree: Tree) = tree match {
+	      case pat @ pq"Abstraction($name @ ${_}, $body)" => {
+		boundNames = boundNames :+ name
+		super.traverse(body)
+	      }
+	      case x => super.traverse(tree)
+	    }
+	  }
+
+	  boundNameTraverser.traverse(pattern)
+	  val boundNames = boundNameTraverser.boundNames
+
+	  /*
+	   * Construct value definitions which generate fresh names for each bound
+	   * pattern variable, e.g., for the bound pattern variables `x' and `y' we
+	   * produce the following code block, where `z1' and `z2' are fresh variable
+	   * names:
+	   * {
+	   *   val z1: Name[A] = fresh()
+	   *   val z2: Name[A] = fresh()
+	   * }
+	   */
+	  val freshNames: Map[Name, TermName] = boundNames.map((name: Name) => (name, newTermName(c.fresh("freshName")))).toMap
+	  val freshNameDefs: List[ValDef] = freshNames.values.toList map {
+	    case name: TermName => q"val $name : Name[Any] = fresh()"
+	  }
+
+	  /*
+	   * Transform the body of the case definition such that:
+	   * - Each of the names bound in an abstraction pattern will be associated
+	   *   with one of the freshly generated names.
+	   * - The expression of each abstraction value will be surrounded by a swap
+	   *   call which swaps the bound name with its corresponding fresh one.
+	   * If for example the bound pattern variable `x' is associated with a
+	   * fresh name stored in the variable `z', the expression
+	   * {
+	   *  Abstraction(x, e)
+	   * }
+	   * will be transformed into
+	   * {
+	   *  Abstraction(z, swap(z, x, e))
+	   * }
+	   */
+	  val transformedBody = body
+	  
+	  CaseDef(pattern, guard, Block(freshNameDefs, transformedBody))
+	}
+      }
+    }
+
+    /* Construct anonymus partial function with transformed case patterns */
+    val transformedDefinition = eplicitSwappingTransformer.transform(definition)
 
     c.Expr[Any](definition)
   }
