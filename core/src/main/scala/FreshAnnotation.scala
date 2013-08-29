@@ -29,6 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import scala.language.postfixOps
 import scala.language.reflectiveCalls
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
@@ -46,8 +47,8 @@ object FreshAnnotation {
   /**
     * Pattern matching over abstraction values.
     *
-    * This annotation performs explicit swapping for all abstraction patterns in a case pattern, i.e.,
-    * the pattern matching code in the definition
+    * This annotation performs explicit swapping for all abstraction patterns in a
+    * case pattern, i.e., the pattern matching code in the definition
     * {{{
     * @Fresh
     * def f(expr: T) = expr match {
@@ -102,7 +103,9 @@ object FreshAnnotation {
 	   *   val z2: Name[A] = fresh()
 	   * }
 	   */
-	  val freshNames: Map[TermName, TermName] = boundNames.map((name: Name) => (name.asInstanceOf[TermName], newTermName(c.fresh("$")))).toMap
+	  val freshNames: Map[TermName, TermName] = boundNames map {
+	    case name => (name.asInstanceOf[TermName], newTermName(c.fresh("$")))
+	  } toMap
 	  val freshNameDefs: List[ValDef] = freshNames.toList map {
 	    case (boundName, freshName) => q"val $freshName = $boundName.refresh()"
 	  }
