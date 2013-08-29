@@ -68,7 +68,6 @@ object FreshAnnotation {
     import c.universe._
 
     val definition = annottees.head.tree
-    // println(showRaw(definition))
 
     /* Perform explicit swapping transformation on all case definitions */
     val eplicitSwappingTransformer = new Transformer {
@@ -86,7 +85,7 @@ object FreshAnnotation {
 		boundNames = boundNames :+ name
 		super.traverse(body)
 	      }
-	      case x => super.traverse(tree)
+	      case _ => super.traverse(tree)
 	    }
 	  }
 
@@ -103,9 +102,9 @@ object FreshAnnotation {
 	   *   val z2: Name[A] = fresh()
 	   * }
 	   */
-	  val freshNames: Map[Name, TermName] = boundNames.map((name: Name) => (name, newTermName(c.fresh("freshName")))).toMap
-	  val freshNameDefs: List[ValDef] = freshNames.values.toList map {
-	    case name: TermName => q"val $name : Name[Any] = fresh()"
+	  val freshNames: Map[TermName, TermName] = boundNames.map((name: Name) => (name.asInstanceOf[TermName], newTermName(c.fresh("$")))).toMap
+	  val freshNameDefs: List[ValDef] = freshNames.toList map {
+	    case (boundName, freshName) => q"val $freshName = $boundName.refresh()"
 	  }
 
 	  /*
@@ -131,7 +130,7 @@ object FreshAnnotation {
       }
     }
 
-    /* Construct anonymus partial function with transformed case patterns */
+    /* Construct definition with transformed case patterns */
     val transformedDefinition = eplicitSwappingTransformer.transform(definition)
 
     c.Expr[Any](definition)
