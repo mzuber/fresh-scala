@@ -60,7 +60,9 @@ object FreshAnnotation {
     * def f(expr: T) = expr match {
     *   case Constructor(Abstraction(y, e)) => {
     *     val z = fresh()
-    *     Abstraction(z, swap(z, y, ... e ...))
+    *     Constructor(Abstraction(z, swap(z, y, e))) match {
+    *       case Constructor(Abstraction(y, e)) => Abstraction(y, ... e ...)
+    *     }
     *   }
     * }
     * }}}
@@ -99,8 +101,8 @@ object FreshAnnotation {
 	   * produce the following code block, where `z1' and `z2' are fresh variable
 	   * names:
 	   * {
-	   *   val z1: Name[A] = fresh()
-	   *   val z2: Name[A] = fresh()
+	   *   val z1 = x.refresh()
+	   *   val z2 = y.refresh()
 	   * }
 	   */
 	  val freshNames: Map[TermName, TermName] = boundNames map {
@@ -111,33 +113,32 @@ object FreshAnnotation {
 	  }
 
 	  /*
-	   * Transform the body of the case definition such that:
+	   * Transform the case definition such that:
 	   * - Each of the names bound in an abstraction pattern will be associated
 	   *   with one of the freshly generated names.
-	   * - The expression of each abstraction value will be surrounded by a swap
-	   *   call which swaps the bound name with its corresponding fresh one.
+	   * - The expression bound in the abstraction pattern will be surrounded by
+	   *   a swap call which swaps the bound name with its corresponding fresh one.
 	   * If for example the bound pattern variable `x' is associated with a
-	   * fresh name stored in the variable `z', the expression
+	   * fresh name stored in the variable `z', the case definition
 	   * {
-	   *  Abstraction(x, e)
+	   *  case Abstraction(x, e) => Abstraction(x, f(e))
 	   * }
 	   * will be transformed into
 	   * {
-	   *  Abstraction(z, swap(z, x, e))
+	   *  case Abstraction(x, e) => {
+	   *    val z = x.refresh()
+	   *    Abstraction(z, swap(z, x, e)) match {
+	   *      case Abstraction(x, e) => Abstraction(x, f(e))
+	   *    }
+	   *  }
 	   * }
 	   */
 	  val bodyTransformer = new Transformer {
-
-	    override def transform(tree: Tree) = tree match {
-	      case pq"Abstraction(${Ident(name)}, $expr)" => {
-		val boundName = name.asInstanceOf[TermName] 
-		freshNames.get(boundName) match {
-		  case Some(freshName) => q"Abstraction($freshName, swap($freshName, $name, ${super.transform(expr)}))"
-		  case None            => q"Abstraction($name, ${super.transform(expr)})"
-		}
-	      }
-	      case _ => super.transform(tree)
-	    }
+	    /*
+	     * TODO: Implement transformation
+	     * How do we translate a pattern with nested abstractions?
+	     */
+	    override def transform(tree: Tree) = tree
 	  }
 	  val transformedBody = bodyTransformer.transform(body)
 	  
