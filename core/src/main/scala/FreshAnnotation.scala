@@ -126,7 +126,20 @@ object FreshAnnotation {
 	   *  Abstraction(z, swap(z, x, e))
 	   * }
 	   */
-	  val transformedBody = body
+	  val bodyTransformer = new Transformer {
+
+	    override def transform(tree: Tree) = tree match {
+	      case pq"Abstraction(${Ident(name)}, $expr)" => {
+		val boundName = name.asInstanceOf[TermName] 
+		freshNames.get(boundName) match {
+		  case Some(freshName) => q"Abstraction($freshName, swap($freshName, $name, ${super.transform(expr)}))"
+		  case None            => q"Abstraction($name, ${super.transform(expr)})"
+		}
+	      }
+	      case _ => super.transform(tree)
+	    }
+	  }
+	  val transformedBody = bodyTransformer.transform(body)
 	  
 	  CaseDef(pattern, guard, Block(freshNameDefs, transformedBody))
 	}

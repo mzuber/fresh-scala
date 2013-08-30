@@ -62,12 +62,13 @@ object Example {
     * obtained by capture-avoiding substitution of the term 'e1' for all
     * free occurrences of the variable 'x' in the term 'e2'.
     */
-  def subst(e1: Term, x: Name[Var], e2: Term): Term = freshMatch(e2){
+  @Fresh
+  def subst(e1: Term, x: Name[Var], e2: Term): Term = e2 match {
     case Variable(y) => if (x == y) e1 else Variable(y)
-    case Function(Abstraction(y, e)) => Function(<<(y)>> subst(e1, x, e))
+    case Function(Abstraction(y, e)) => Function(Abstraction(y, subst(e1, x, e)))
     case Application(f, e) => Application(subst(e1, x, f), subst(e1, x, e))
     case LetFunction(Abstraction(f, (Abstraction(y, e), body))) =>
-      LetFunction(<<(f)>> (<<(y)>> subst(e1, x, e), subst(e1, x, body)))
+      LetFunction(Abstraction(f, (Abstraction(y, subst(e1, x, e)), subst(e1, x, body))))
   }
 
 
@@ -98,7 +99,7 @@ object Example {
   /**
     * Structural equality of two terms.
     */
-  @Fresh
+  // @Fresh
   def eq(e1: Term, e2: Term): Boolean = (e1, e2) match {
     case (Variable(x), Variable(y)) => x == y
     case (Function(Abstraction(x1, e1)), Function(Abstraction(x2, e2))) => eq(swap(x1, x2, e1), e2)
