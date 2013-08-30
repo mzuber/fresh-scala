@@ -85,13 +85,13 @@ object Example {
     case Variable(y) => if (x == y) e1 else Variable(y)
     case Function(Abstraction(y, e)) => {
       val z: Name[Var] = fresh() // Or: z.refresh()
-      Function(<<(z)>> swap(z, y, substExpl(e1, x, e)))
+      Function(<<(z)>> substExpl(e1, x, swap(z, y, e)))
     }
     case Application(f, e) => Application(substExpl(e1, x, f), substExpl(e1, x, e))
     case LetFunction(Abstraction(f, (Abstraction(y, e), body))) => {
       val g: Name[Var] = fresh() // Or: f.refresh()
       val z: Name[Var] = fresh() // Or: z.refresh()
-      LetFunction(<<(g)>> swap(g, f, (<<(z)>> swap(z, y, substExpl(e1, x, e)), substExpl(e1, x, body))))
+      LetFunction(<<(g)>> swap(g, f, (<<(z)>> substExpl(e1, x, swap(z, y, e)), substExpl(e1, x, body))))
     }
   }
 
@@ -121,6 +121,7 @@ object Example {
     val e2 = Function(<<(x)>> Function(<<(y)>> Application(Variable(x), Variable(x))))
     val e3 = Function(<<(x)>> Function(<<(y)>> Application(Variable(y), Variable(y))))
 
+    println("subst(Variable(y), x, e0) = " + subst(Variable(y), x, e0))
     println("substExpl(Variable(y), x, e0) = " + substExpl(Variable(y), x, e0))
     println("eq(e1, e2) = " + eq(e1, e2))
     println("eq(e1, e3) = " + eq(e1, e3))
