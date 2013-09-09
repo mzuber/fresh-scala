@@ -78,22 +78,51 @@ object FreshAnnotation {
       override def transformCaseDefs(trees: List[CaseDef]) = trees map {
 	case CaseDef(pattern, guard , body) => {
 
-	  /* Collect all pattern variables which are bound in an abstraction pattern */
-	  val boundNameTraverser = new Traverser {
-
+	  /*
+	   * Rewrite the pattern, such that
+	   * - the body of an abstraction is aliased with a pattern variable,
+	   * - and all wildcards are aliased with a pattern variable.
+	   * For example, the pattern
+	   * {
+	   *  C(Abstraction(x, ...), _)
+	   * }
+	   * will be transformed into
+	   * {
+	   *  C(Abstraction(x, e1 @ ...), e2)
+	   * }
+	   * Additionally, we collect all pattern variables which are bound in an
+	   * abstraction pattern along the way.
+	   */
+	  val patternTransformer = new Transformer {
+	    
 	    var boundNames: List[Name] = List()
+	    var boundExprs: List[Name] = List()
 
-	    override def traverse(tree: Tree) = tree match {
-	      case pat @ pq"Abstraction($name @ ${_}, $body)" => {
+	    override def transform(tree: Tree) = tree match {
+	      /* Abstraction pattern with aliased body */
+	      case pat @ pq"Abstraction($name @ ${_}, $alias @ $body)" => {
 		boundNames = boundNames :+ name
-		super.traverse(body)
+		boundExprs = boundExprs :+ alias
+		pq"Abstraction($name, $alias @ ${super.transform(body)})"
 	      }
-	      case _ => super.traverse(tree)
+	      /* Abstraction pattern with non-aliased body */
+	      case pat @ pq"Abstraction($name @ ${_}, $body)" => {
+		val alias = newTermName(c.fresh("e_")) // TODO: unique prefix for alias
+		boundNames = boundNames :+ name
+		boundExprs = boundExprs :+ alias
+		pq"Abstraction($name, $alias @ ${super.transform(body)})"
+	      }
+	      /* Aliased wildcards are not transformed */
+	      case pat @ pq"$name @ ${Ident(nme.WILDCARD)}" => pat
+
+	      /* Wildcards are replaced by a fresh pattern variable */
+	      case pq"_" => Ident(newTermName(c.fresh("e_")))
+
+	      case _ => super.transform(tree)
 	    }
 	  }
-
-	  boundNameTraverser.traverse(pattern)
-	  val boundNames = boundNameTraverser.boundNames
+	  val transformedPattern = patternTransformer.transform(pattern)
+	  // println(transformedPattern)
 
 	  /*
 	   * Construct value definitions which generate fresh names for each bound
@@ -101,12 +130,12 @@ object FreshAnnotation {
 	   * produce the following code block, where `z1' and `z2' are fresh variable
 	   * names:
 	   * {
-	   *   val z1 = x.refresh()
-	   *   val z2 = y.refresh()
+	   *   val $_1 = x.refresh()
+	   *   val $_2 = y.refresh()
 	   * }
 	   */
-	  val freshNames: Map[TermName, TermName] = boundNames map {
-	    case name => (name.asInstanceOf[TermName], newTermName(c.fresh("$")))
+	  val freshNames: Map[TermName, TermName] = patternTransformer.boundNames map {
+	    case name => (name.asInstanceOf[TermName], newTermName(c.fresh("$_")))
 	  } toMap
 	  val freshNameDefs: List[ValDef] = freshNames.toList map {
 	    case (boundName, freshName) => q"val $freshName = $boundName.refresh()"
@@ -162,7 +191,7 @@ object FreshAnnotation {
 	  }
 	  val transformedBody = bodyTransformer.transform(body)
 	  
-	  CaseDef(pattern, guard, Block(freshNameDefs, transformedBody))
+	  CaseDef(transformedPattern, guard, Block(freshNameDefs, transformedBody))
 	}
       }
     }
