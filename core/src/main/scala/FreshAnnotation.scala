@@ -52,16 +52,16 @@ object FreshAnnotation {
     * {{{
     * @Fresh
     * def f(expr: T) = expr match {
-    *   case Constructor(Abstraction(y, e)) => Abstraction(y, ... e ...)
+    *   case Constructor(Abstraction(y, ...)) => ...
     * }
     * }}}
     * will be transformed into case patterns with explicit swapping:
     * {{{
     * def f(expr: T) = expr match {
-    *   case Constructor(Abstraction(y, e)) => {
+    *   case Constructor(Abstraction(y, e @ ...)) => {
     *     val z = fresh()
     *     Constructor(Abstraction(z, swap(z, y, e))) match {
-    *       case Constructor(Abstraction(y, e)) => Abstraction(y, ... e ...)
+    *       case Constructor(Abstraction(y, ...)) => ...
     *     }
     *   }
     * }
@@ -118,17 +118,38 @@ object FreshAnnotation {
 	   *   with one of the freshly generated names.
 	   * - The expression bound in the abstraction pattern will be surrounded by
 	   *   a swap call which swaps the bound name with its corresponding fresh one.
+	   * 
 	   * If for example the bound pattern variable `x' is associated with a
 	   * fresh name stored in the variable `z', the case definition
 	   * {
-	   *  case Abstraction(x, e) => Abstraction(x, f(e))
+	   *  case Abstraction(x, ...) => ...
 	   * }
 	   * will be transformed into
 	   * {
-	   *  case Abstraction(x, e) => {
+	   *  case Abstraction(x, e @ ...) => {
 	   *    val z = x.refresh()
 	   *    Abstraction(z, swap(z, x, e)) match {
-	   *      case Abstraction(x, e) => Abstraction(x, f(e))
+	   *      case Abstraction(x, ...) => ...
+	   *    }
+	   *  }
+	   * }
+	   * 
+	   * Nested abstraction patterns will be transformed the same way, the case
+	   * definition
+	   * {
+	   *  case Abstraction(x, Abstraction(y, ...)) => ...
+	   * }
+	   * will be translated into
+	   * {
+	   *  case Abstraction(x, e1 @ Abstraction(y, ...)) => {
+	   *    val z1 = x.refresh()
+	   *    Abstraction(z1, swap(z1, x, e1)) match {
+	   *      case Abstraction(x, Abstraction(y, e2 @ ...)) => {
+	   *        val z2 = y.refresh()
+	   *        Abstraction(x, Abstraction(z2, swap(z2, y e2)) match {
+	   *          case Abstraction(x, Abstraction(y, ...)) => ...
+	   *        }
+	   *      }
 	   *    }
 	   *  }
 	   * }
@@ -136,7 +157,6 @@ object FreshAnnotation {
 	  val bodyTransformer = new Transformer {
 	    /*
 	     * TODO: Implement transformation
-	     * How do we translate a pattern with nested abstractions?
 	     */
 	    override def transform(tree: Tree) = tree
 	  }
