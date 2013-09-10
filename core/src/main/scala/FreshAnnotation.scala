@@ -91,38 +91,42 @@ object FreshAnnotation {
 	   *  C(Abstraction(x, e1 @ ...), e2)
 	   * }
 	   * Additionally, we collect all pattern variables which are bound in an
-	   * abstraction pattern along the way.
+	   * abstraction pattern along the way. The prefix for all new pattern variables,
+	   * i.e., the generated aliases, will be '_e_'.
 	   */
 	  val patternTransformer = new Transformer {
-	    
+	    /* The pattern variables which are bound in an abstraction pattern */
+	    var abstractions: Map[Name, Name] = Map()
+
+	    /* Pattern variables of the bound names in the order they appear in the pattern */
 	    var boundNames: List[Name] = List()
-	    var boundExprs: List[Name] = List()
 
 	    override def transform(tree: Tree) = tree match {
 	      /* Abstraction pattern with aliased body */
-	      case pat @ pq"Abstraction($name @ ${_}, $alias @ $body)" => {
+	      case pq"Abstraction($name @ ${_}, $alias @ $body)" => {
+		abstractions = abstractions + (name -> alias)
 		boundNames = boundNames :+ name
-		boundExprs = boundExprs :+ alias
 		pq"Abstraction($name, $alias @ ${super.transform(body)})"
 	      }
 	      /* Abstraction pattern with non-aliased body */
-	      case pat @ pq"Abstraction($name @ ${_}, $body)" => {
-		val alias = newTermName(c.fresh("e_")) // TODO: unique prefix for alias
+	      case pq"Abstraction($name @ ${_}, $body)" => {
+		val alias = newTermName(c.fresh("_e_"))
+		abstractions = abstractions + (name -> alias)
 		boundNames = boundNames :+ name
-		boundExprs = boundExprs :+ alias
 		pq"Abstraction($name, $alias @ ${super.transform(body)})"
 	      }
 	      /* Aliased wildcards are not transformed */
 	      case pat @ pq"$name @ ${Ident(nme.WILDCARD)}" => pat
 
 	      /* Wildcards are replaced by a fresh pattern variable */
-	      case pq"_" => Ident(newTermName(c.fresh("e_")))
+	      case pq"_" => Ident(newTermName(c.fresh("_e_")))
 
 	      case _ => super.transform(tree)
 	    }
 	  }
 	  val transformedPattern = patternTransformer.transform(pattern)
-	  // println(transformedPattern)
+	  val boundNames = patternTransformer.boundNames
+	  val abstractions = patternTransformer.abstractions
 
 	  /*
 	   * Construct value definitions which generate fresh names for each bound
@@ -130,12 +134,13 @@ object FreshAnnotation {
 	   * produce the following code block, where `z1' and `z2' are fresh variable
 	   * names:
 	   * {
-	   *   val $_1 = x.refresh()
-	   *   val $_2 = y.refresh()
+	   *   val z1 = x.refresh()
+	   *   val z2 = y.refresh()
 	   * }
+	   * The prefix for all fresh variable names will be '_$_'.
 	   */
-	  val freshNames: Map[TermName, TermName] = patternTransformer.boundNames map {
-	    case name => (name.asInstanceOf[TermName], newTermName(c.fresh("$_")))
+	  val freshNames: Map[Name, TermName] = boundNames map {
+	    case name => (name, newTermName(c.fresh("_$_")))
 	  } toMap
 	  val freshNameDefs: List[ValDef] = freshNames.toList map {
 	    case (boundName, freshName) => q"val $freshName = $boundName.refresh()"
@@ -151,14 +156,14 @@ object FreshAnnotation {
 	   * If for example the bound pattern variable `x' is associated with a
 	   * fresh name stored in the variable `z', the case definition
 	   * {
-	   *  case Abstraction(x, ...) => ...
+	   *  case Abstraction(x, e @ ...) => ...
 	   * }
 	   * will be transformed into
 	   * {
 	   *  case Abstraction(x, e @ ...) => {
 	   *    val z = x.refresh()
 	   *    Abstraction(z, swap(z, x, e)) match {
-	   *      case Abstraction(x, ...) => ...
+	   *      case Abstraction(x, e @ ...) => ...
 	   *    }
 	   *  }
 	   * }
@@ -166,31 +171,55 @@ object FreshAnnotation {
 	   * Nested abstraction patterns will be transformed the same way, the case
 	   * definition
 	   * {
-	   *  case Abstraction(x, Abstraction(y, ...)) => ...
+	   *  case Abstraction(x, e1 @ Abstraction(y, e2 @ ...)) => ...
 	   * }
 	   * will be translated into
 	   * {
-	   *  case Abstraction(x, e1 @ Abstraction(y, ...)) => {
+	   *  case Abstraction(x, e1 @ Abstraction(y, e2 @ ...)) => {
 	   *    val z1 = x.refresh()
+	   *    val z2 = y.refresh()
 	   *    Abstraction(z1, swap(z1, x, e1)) match {
-	   *      case Abstraction(x, Abstraction(y, e2 @ ...)) => {
-	   *        val z2 = y.refresh()
+	   *      case Abstraction(x, e1 @ Abstraction(y, e2 @ ...)) => {
 	   *        Abstraction(x, Abstraction(z2, swap(z2, y e2)) match {
-	   *          case Abstraction(x, Abstraction(y, ...)) => ...
+	   *          case Abstraction(x, e1 @ Abstraction(y, e2 @ ...)) => ...
 	   *        }
 	   *      }
 	   *    }
 	   *  }
 	   * }
 	   */
-	  val bodyTransformer = new Transformer {
+	  val transformedBody = {
+
 	    /*
-	     * TODO: Implement transformation
+	     * Construct a value from the pattern and swap the bound name with
+	     * the fresh one in the body of the abstraction.
 	     */
-	    override def transform(tree: Tree) = tree
+	    val freshen = (boundName: Name, body: Name, freshName: Name) => {
+	      val constructValueTransformer = new Transformer {
+		override def transform(tree: Tree) = tree match {
+		  /* Freshen the abstraction over the given bound name */
+		  case pq"Abstraction($name @ ${_}, ${_})" if name == boundName => {
+		    q"Abstraction($freshName, swap($freshName, $boundName, $body))"
+		  }
+		  /* Aliased wildcards are transformed to regular identifiers */
+		  case pq"$alias @ ${Ident(nme.WILDCARD)}" => q"$alias"
+
+		  case _ => super.transform(tree)
+		}
+	      }
+	      constructValueTransformer.transform(transformedPattern)
+	    }
+
+	    /* Construct the (nested) match statement */
+	    boundNames.foldRight(body)(
+	      (name: Name, tree: Tree) => {
+		val freshendValue = freshen(name, abstractions(name), freshNames(name))
+		q"$freshendValue match { case $transformedPattern => $tree }"
+	      }
+	    )
 	  }
-	  val transformedBody = bodyTransformer.transform(body)
 	  
+	  /* Construct a case definition with transformed pattern and body */
 	  CaseDef(transformedPattern, guard, Block(freshNameDefs, transformedBody))
 	}
       }
@@ -199,7 +228,9 @@ object FreshAnnotation {
     /* Construct definition with transformed case patterns */
     val transformedDefinition = eplicitSwappingTransformer.transform(definition)
 
-    c.Expr[Any](definition)
+//    println(show(transformedDefinition))
+
+    c.Expr[Any](transformedDefinition)
   }
 
 }
