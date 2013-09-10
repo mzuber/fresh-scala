@@ -46,7 +46,7 @@ object Example {
     * Abstract syntax for our object-language.
     *
     * Using bindable names allows us to define α-equivalence
-    * classes of the languages abstract syntax trees.
+    * classes of the language's abstract syntax trees.
     */
   sealed abstract class Term
   case class Variable(name: Name[Var]) extends Term                                              /* x */
