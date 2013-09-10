@@ -198,11 +198,16 @@ object FreshAnnotation {
 	      val constructValueTransformer = new Transformer {
 		override def transform(tree: Tree) = tree match {
 		  /* Freshen the abstraction over the given bound name */
-		  case pq"Abstraction($name @ ${_}, ${_})" if name == boundName => {
-		    q"Abstraction($freshName, swap($freshName, $boundName, $body))"
+		  case pq"Abstraction($name @ ${_}, $expr)" => {
+		    if (name == boundName)
+		      q"Abstraction($freshName, swap($freshName, $boundName, $body))"
+		    else
+		      q"Abstraction($name, ${transform(expr)})"
 		  }
 		  /* Aliased wildcards are transformed to regular identifiers */
 		  case pq"$alias @ ${Ident(nme.WILDCARD)}" => q"$alias"
+		  /* In aliased expressions, the alias is removed */
+		  case pq"$alias @ $expr" => q"${transform(expr)}"
 
 		  case _ => super.transform(tree)
 		}
@@ -227,8 +232,6 @@ object FreshAnnotation {
 
     /* Construct definition with transformed case patterns */
     val transformedDefinition = eplicitSwappingTransformer.transform(definition)
-
-//    println(show(transformedDefinition))
 
     c.Expr[Any](transformedDefinition)
   }
