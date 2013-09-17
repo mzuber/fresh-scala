@@ -118,8 +118,11 @@ object FreshAnnotation {
 	      /* Aliased wildcards are not transformed */
 	      case pat @ pq"$name @ ${Ident(nme.WILDCARD)}" => pat
 
-	      /* Wildcards are replaced by a fresh pattern variable */
-	      case pq"_" => Ident(newTermName(c.fresh("_e_")))
+	      /* Wildcards are aliased with a fresh pattern variable */
+	      case pq"_" => {
+		val alias = newTermName(c.fresh("_e_"))
+		pq"$alias @ _"
+	      }
 
 	      case _ => super.transform(tree)
 	    }

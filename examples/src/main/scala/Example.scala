@@ -99,7 +99,7 @@ object Example {
   /**
     * Structural equality of two terms.
     */
-  // @Fresh
+  @Fresh
   def eq(e1: Term, e2: Term): Boolean = (e1, e2) match {
     case (Variable(x), Variable(y)) => x == y
     case (Function(Abstraction(x1, e1)), Function(Abstraction(x2, e2))) => eq(swap(x1, x2, e1), e2)
@@ -123,7 +123,7 @@ object Example {
 
     println("subst(Variable(y), x, e0) = " + subst(Variable(y), x, e0))
     println("substExpl(Variable(y), x, e0) = " + substExpl(Variable(y), x, e0))
-    println("eq(e1, e2) = " + eq(e1, e2))
-    println("eq(e1, e3) = " + eq(e1, e3))
+    println("eq(e1, e2) = " + eq(e1, e2)) // Should be false
+    println("eq(e1, e3) = " + eq(e1, e3)) // Should be true
   }
 }
