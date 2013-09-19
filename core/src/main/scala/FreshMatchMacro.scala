@@ -99,24 +99,18 @@ object FreshMatchMacro {
 	    var boundNames: List[Name] = List()
 
 	    override def transform(tree: Tree) = tree match {
-	      /* Abstraction pattern with aliased body */
-	      case pq"Abstraction($name @ ${_}, $alias @ $body)" => {
-		abstractions = abstractions + (name -> alias)
-		boundNames = boundNames :+ name
-		pq"Abstraction($name, $alias @ ${super.transform(body)})"
+	      /*
+	       * The patterns of the partial function differ from regular
+	       * patterns, i.e., the used constructor is stored in the TypeTree
+	       * of an Apply node.
+	       */
+	      case Apply(constructor @ TypeTree(), args) => constructor.original match {
+		case Select(_, sym) if (sym == newTermName("Abstraction")) => {
+		  // TODO: transformation
+		  Apply(constructor, super.transformTrees(args))
+		}
+		case _ => Apply(constructor, super.transformTrees(args))
 	      }
-	      /* Abstraction pattern with non-aliased body */
-	      case pq"Abstraction($name @ ${_}, $body)" => {
-		val alias = newTermName(c.fresh("_e_"))
-		abstractions = abstractions + (name -> alias)
-		boundNames = boundNames :+ name
-		pq"Abstraction($name, $alias @ ${super.transform(body)})"
-	      }
-	      /* Aliased wildcards are not transformed */
-	      case pat @ pq"$name @ ${Ident(nme.WILDCARD)}" => pat
-
-	      /* Wildcards are replaced by a fresh pattern variable */
-	      case pq"_" => Ident(newTermName(c.fresh("_e_")))
 
 	      case _ => super.transform(tree)
 	    }
