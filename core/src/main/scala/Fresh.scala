@@ -147,9 +147,7 @@ object Fresh {
     }
 
     // Apply the strategy to the given expression and make shure the result has type B
-    everywhere(swap)(expr).getOrElse(expr) match {
-      case expr: B @unchecked => expr
-    }
+    everywhere(swap)(expr).getOrElse(expr).asInstanceOf[B]
   }
 
 
