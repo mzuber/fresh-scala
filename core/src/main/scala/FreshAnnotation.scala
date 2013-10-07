@@ -95,7 +95,7 @@ object FreshAnnotation {
 	   * i.e., the generated aliases, will be '_e_'.
 	   */
 	  val patternTransformer = new Transformer {
-	    /* The pattern variables which are bound in an abstraction pattern */
+	    /* The pattern variables which are bound in an abstraction pattern and the alias of the corresponding body */
 	    var abstractions: Map[Name, Name] = Map()
 
 	    /* Pattern variables of the bound names in the order they appear in the pattern */

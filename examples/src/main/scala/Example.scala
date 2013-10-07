@@ -62,8 +62,8 @@ object Example {
     * obtained by capture-avoiding substitution of the term 'e1' for all
     * free occurrences of the variable 'x' in the term 'e2'.
     */
-  // @Fresh
-  def subst(e1: Term, x: Name[Var], e2: Term): Term = freshMatch(e2) {
+  @Fresh
+  def subst(e1: Term, x: Name[Var], e2: Term): Term = e2 match {
     case Variable(y) => if (x == y) e1 else Variable(y)
     case Function(Abstraction(y, e)) => Function(Abstraction(y, subst(e1, x, e)))
     case Application(f, e) => Application(subst(e1, x, f), subst(e1, x, e))
