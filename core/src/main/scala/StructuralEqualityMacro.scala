@@ -34,9 +34,23 @@ import scala.reflect.macros.Context
 
 import Fresh._
 
+/**
+  * Macro for testing structural equality of two terms of the object-language.
+  *
+  * The important property of out system is that values of a type using abstraction types
+  * are observationally equivalent iff they correspond to α-equivalence terms of the
+  * object-language. Thus, a function that tests for structural equality computes object-
+  * level α-equivalence.
+  */
 object StructuralEqualityMacro {
 
-
+  /**
+    * Structural equality over two terms of the object-language.
+    *
+    * This macro generates a match statement with patterns for pairs of all constructors
+    * of the given algebraic data type. The body of each case definition compares the
+    * children of each value, swapping bound variables in all abstraction values.
+    */
   def structuralEqualityImpl[A: c.WeakTypeTag](c: Context)(e1: c.Expr[A], e2: c.Expr[A]): c.Expr[Boolean] = {
     import c.universe._
 

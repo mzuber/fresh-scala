@@ -106,7 +106,20 @@ object FreshMatchMacro {
 	       */
 	      case Apply(constructor @ TypeTree(), args) => constructor.original match {
 		case Select(_, sym) if (sym == newTermName("Abstraction")) => {
+		  args match {
+		    /* Abstraction pattern with aliased body */
+		    case List(Bind(name, Ident(nme.WILDCARD)), Bind(alias, body)) => println("Abstraction pattern with aliased body")
+		    /* Abstraction pattern with non-aliased body */
+		    case List(Bind(name, Ident(nme.WILDCARD)), body) => println("Abstraction pattern with non-aliased body")
+
+		    case _ => ()
+		  }
+
+
 		  // TODO: transformation
+		  println("Constructor: " + constructor)
+		  val List(boundName, expr) = args
+		  println("Args: " + showRaw(boundName) + " , " + showRaw(expr))
 		  Apply(constructor, super.transformTrees(args))
 		}
 		case _ => Apply(constructor, super.transformTrees(args))
