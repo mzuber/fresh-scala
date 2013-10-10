@@ -72,8 +72,10 @@ object Fresh {
     }
 
     /**
-      * Refresh this name, i.e., create a name with a fresh atom
-      * and the same type as this name.
+      * Create a name with a fresh atom and the same type as this name.
+      *
+      * Note: This method does not change the atom of this name, it creates
+      * a new name of the same type with a fresh atom.
       */
     def refresh(): Name[A] = fresh[A]()
 
