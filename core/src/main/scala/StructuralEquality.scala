@@ -37,7 +37,7 @@ import scala.collection.mutable.ListBuffer
 import Fresh._
 
 /**
-  * Generic implemtation for testing structural equality of two terms of the object-language.
+  * Generic implementation for testing structural equality of two terms of the object-language.
   *
   * The important property of out system is that values of a type using abstraction types
   * are observationally equivalent iff they correspond to α-equivalence terms of the
@@ -47,36 +47,34 @@ import Fresh._
 object StructuralEquality extends Rewriter {
 
   def structuralEquality[A](e1: A, e2: A): Boolean = {
-    val e1Fresh = refreshNames(e1)
-    eq(e1Fresh,e2)
+    eq(e1,e2)
   }
 
   private def eq[A](a:A,b:A) : Boolean = {
     val eqRule = rule {
-      case ((a @ Abstraction(x1,e1)),(b @ Abstraction(x2,e2))) => eq(swap(x1,x2,e1),e2)
+      /** If both sides have the form Abstraction(x1,e1) respectively 
+        * Abstraction(x2,e2) we swap every occurrence of x1 in e1 with x2.
+        * This new term is compared to e2.
+        */
+      case ((a @ Abstraction(x1,e1)),(b @ Abstraction(x2,e2))) => 
+        eq(swap(x1,x2,e1),e2)
+       /** This part implements the generic comparison of to terms:
+         * Two terms are equal:
+         *  -if they are instances of the class
+         *  -have the same number of children
+         *  -all children are equal with their matching counterpart
+         */
       case (x,y) if x.getClass == y.getClass =>
         val xc = getChildren(x)
         val yc = getChildren(y)
         if(xc.size != yc.size) false
-        else if(xc.size == 0) x == y
+        else if(xc.size == 0) x == y //true would probably be sufficient
         else xc.zip(yc).foldLeft(true)({ case (acc,(f,g)) => acc && eq(f,g)})
       case _ => false
     }
     eqRule((a,b)).get.asInstanceOf[Boolean]
   }
 
-  private  def refreshNames[A](in:A) : A = {
-    def refreshNamesRule : Strategy = rule {
-      case (x @ Abstraction(name,t)) => {
-        val newName = name.refresh()
-        val t2 = swap(name,newName,t)
-        val t3 = refreshNames(t2).asInstanceOf[AnyRef]
-        dup(x, Array[AnyRef](newName, t3))
-      }
-      case x => all(refreshNamesRule)(x).get
-    }
-    refreshNamesRule(in).get.asInstanceOf[A]
-  }
 
   /**
     * Get the children of the given value.

@@ -53,6 +53,7 @@ object ObjectLanguage {
   case class App(fun: Term, arg: Term) extends Term                                   /* e1 e2 */
   case class Let(let: Abstraction[Ide, (Abstraction[Ide, Term], Term)]) extends Term  /* let fun f x = e1 in e2 */
 
+  case class Tuple(t: List[Term]) extends Term /* (t1,...,tn) */
 
   /**
     * Capture-avoiding substitution.
@@ -61,7 +62,8 @@ object ObjectLanguage {
     * obtained by capture-avoiding substitution of the term 'e1' for all
     * free occurrences of the variable 'x' in the term 'e2'.
     */
-  def subst(e1: Term, x: Name[Ide], e2: Term): Term = freshMatch(e2){
+  @Fresh
+  def subst(e1: Term, x: Name[Ide], e2: Term): Term = e2 match {
     case Var(y) => if (x == y) e1 else Var(y)
     case Fun(Abstraction(y, e)) => Fun(<<(y)>> subst(e1, x, e))
     case App(f, e) => App(subst(e1, x, f), subst(e1, x, e))
