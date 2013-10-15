@@ -33,7 +33,7 @@ import Fresh._
 
 
 /**
-  * Object-language from "Mark R. Shinwell, Andrew M. Pitts - Fresh Objective Caml User Manual".
+  * Extended object-language from "Mark R. Shinwell, Andrew M. Pitts - Fresh Objective Caml User Manual".
   */
 object ObjectLanguage {
 
@@ -52,8 +52,8 @@ object ObjectLanguage {
   case class Fun(fun: Abstraction[Ide, Term]) extends Term                            /* fn x => e */
   case class App(fun: Term, arg: Term) extends Term                                   /* e1 e2 */
   case class Let(let: Abstraction[Ide, (Abstraction[Ide, Term], Term)]) extends Term  /* let fun f x = e1 in e2 */
+  case class Tuple(terms: List[Term]) extends Term                                    /* (t1, ..., tn) */
 
-  case class Tuple(t: List[Term]) extends Term /* (t1,...,tn) */
 
   /**
     * Capture-avoiding substitution.
@@ -69,5 +69,6 @@ object ObjectLanguage {
     case App(f, e) => App(subst(e1, x, f), subst(e1, x, e))
     case Let(Abstraction(f, (Abstraction(y, e), body))) =>
       Let(<<(f)>> (<<(y)>> subst(e1, x, e), subst(e1, x, body)))
+    case Tuple(terms) => Tuple(terms map { (t: Term) => subst(e1, x, t) })
   }
 }
