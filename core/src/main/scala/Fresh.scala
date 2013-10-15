@@ -37,7 +37,6 @@ import org.kiama.rewriting.Rewriter._
 import AtomSupply.freshAtom
 import FreshMatchMacro.freshMatchImpl
 import FreshAnnotation.freshAnnotationImpl
-import StructuralEqualityMacro.structuralEqualityImpl
 
 /**
   * Define object-level syntax modulo α-equivalence in Scala.
@@ -188,10 +187,77 @@ object Fresh {
 
 
   /**
-    * Structural equality of two expressions.
+    * Generic implementation for testing structural equality of two terms of the object-language.
     *
-    * Test if the first expression is structurally equal to the
-    * second one, i.e., check for object-level α-equivalence.
+    * The important property of out system is that values of a type using abstraction types
+    * are observationally equivalent iff they correspond to α-equivalence terms of the
+    * object-language. Thus, a function that tests for structural equality computes object-
+    * level α-equivalence.
+    *
+    * This method tests if the first expression is structurally equal to the second one
+    * using data-type generic programming.
     */
-  def structuralEquality[A](e1: A, e2: A): Boolean = StructuralEquality.structuralEquality(e1,e2)
+  def structuralEquality[A](e1: A, e2: A): Boolean = {
+
+    /* Get the children of the given term. */
+    def getChildren(term: Any): List[Any] = {
+      var children = List[Any]()
+
+      all(queryf {
+	case c => children = children :+ c
+      })(term)
+
+      children
+    }
+
+    val genericEquality = rule {
+      /*
+       * If both terms are abstraction values, we swap every occurrence
+       * of `x1' in `e1' with `x2' and compare the result to `e2'.
+       */
+      case (Abstraction(x1, e1), Abstraction(x2, e2)) => structuralEquality(swap(x1 ,x2 ,e1 ), e2)
+
+      /*
+       * Generic comparison of two terms.
+       * Two terms are equal if:
+       * - they are instances of the class
+       * - have the same number of children
+       * - all children are equal to their matching counterpart
+       */
+      case (t1, t2) if t1.getClass == t2.getClass => {
+        val c1 = getChildren(t1)
+        val c2 = getChildren(t2)
+
+        if (c1.size != c2.size) false
+        else if (c1.size == 0) t1 == t2
+	// TODO: Can this be rewritten using aggregate?
+        else (c1, c2).zipped.foldLeft(true) {
+	  case (acc, (x, y)) => acc && structuralEquality(x, y)
+	}
+      }
+
+      /* Otherwise, the two terms are not structurally equal */
+      case _ => false
+    }
+
+    genericEquality((e1, e2)).get.asInstanceOf[Boolean]
+  }
+
+
+  /**
+    * Syntactic sugar for checking if two expressions are structurally equal.
+    */
+  implicit class ObjectLevelAlphaEquivalence[A](expr: A) {
+
+    /**
+      * Test if this expression is structurally equal to the
+      * given one, i.e., check for object-level α-equivalence.
+      */
+    def =:=(that: A): Boolean = structuralEquality[A](expr, that)
+
+    /**
+      * Test if this expression is not structurally equal to the given one.
+      */
+    def =/=(that: A): Boolean = ! structuralEquality[A](expr, that)
+  }
 }

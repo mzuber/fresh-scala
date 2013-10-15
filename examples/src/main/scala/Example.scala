@@ -124,9 +124,9 @@ object Example {
     println("subst(Variable(y), x, e0) = " + subst(Variable(y), x, e0))
     println("substExpl(Variable(y), x, e0) = " + substExpl(Variable(y), x, e0))
 
-    println("eq(e1, e2) = " + eq(e1, e2))                                  // Should be false
-    println("eq(e1, e3) = " + eq(e1, e3))                                  // Should be true
-    println("structuralEquality(e1, e2) = " + structuralEquality(e1, e2))  // Should be false
-    println("structuralEquality(e1, e3) = " + structuralEquality(e1, e3))  // Should be true
+    println("eq(e1, e2) = " + eq(e1, e2))  // Should be false
+    println("eq(e1, e3) = " + eq(e1, e3))  // Should be true
+    println("e1 =:= e2 = " + (e1 =:= e2))  // Should be false
+    println("e1 =:= e3 = " + (e1 =:= e3))  // Should be true
   }
 }
