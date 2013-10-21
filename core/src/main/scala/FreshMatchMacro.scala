@@ -33,6 +33,7 @@ import scala.language.postfixOps
 import scala.language.reflectiveCalls
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
+import scala.collection.mutable.ListBuffer
 
 import Fresh._
 
@@ -68,7 +69,8 @@ object FreshMatchMacro {
     */
   def freshMatchImpl[A: c.WeakTypeTag, B: c.WeakTypeTag](c: Context)(expr: c.Expr[A])(patterns: c.Expr[PartialFunction[A, B]]): c.Expr[B] = {
     import c.universe._
-
+    /* Copy from FreshAnnotation */
+    /* TODO Use macro traits in 2.11 */
     /* Perform explicit swapping transformation on all case definitions */
     val eplicitSwappingTransformer = new Transformer {
 
@@ -92,37 +94,33 @@ object FreshMatchMacro {
 	   * i.e., the generated aliases, will be '_e_'.
 	   */
 	  val patternTransformer = new Transformer {
-	    /* The pattern variables which are bound in an abstraction pattern */
+	    /* The pattern variables which are bound in an abstraction pattern and the alias of the corresponding body */
 	    var abstractions: Map[Name, Name] = Map()
 
 	    /* Pattern variables of the bound names in the order they appear in the pattern */
 	    var boundNames: List[Name] = List()
 
 	    override def transform(tree: Tree) = tree match {
-	      /*
-	       * The patterns of the partial function differ from regular
-	       * patterns, i.e., the used constructor is stored in the TypeTree
-	       * of an Apply node.
-	       */
-	      case Apply(constructor @ TypeTree(), args) => constructor.original match {
-		case Select(_, sym) if (sym == newTermName("Abstraction")) => {
-		  args match {
-		    /* Abstraction pattern with aliased body */
-		    case List(Bind(name, Ident(nme.WILDCARD)), Bind(alias, body)) => println("Abstraction pattern with aliased body")
-		    /* Abstraction pattern with non-aliased body */
-		    case List(Bind(name, Ident(nme.WILDCARD)), body) => println("Abstraction pattern with non-aliased body")
+	      /* Abstraction pattern with aliased body */
+	      case pq"Abstraction($name @ ${_}, $alias @ $body)" => {
+		abstractions = abstractions + (name -> alias)
+		boundNames = boundNames :+ name
+		pq"Abstraction($name, $alias @ ${super.transform(body)})"
+	      }
+	      /* Abstraction pattern with non-aliased body */
+	      case pq"Abstraction($name @ ${_}, $body)" => {
+		val alias = newTermName(c.fresh("_e_"))
+		abstractions = abstractions + (name -> alias)
+		boundNames = boundNames :+ name
+		pq"Abstraction($name, $alias @ ${super.transform(body)})"
+	      }
+	      /* Aliased wildcards are not transformed */
+	      case pat @ pq"$name @ ${Ident(nme.WILDCARD)}" => pat
 
-		    case _ => ()
-		  }
-
-
-		  // TODO: transformation
-		  println("Constructor: " + constructor)
-		  val List(boundName, expr) = args
-		  println("Args: " + showRaw(boundName) + " , " + showRaw(expr))
-		  Apply(constructor, super.transformTrees(args))
-		}
-		case _ => Apply(constructor, super.transformTrees(args))
+	      /* Wildcards are aliased with a fresh pattern variable */
+	      case pq"_" => {
+		val alias = newTermName(c.fresh("_e_"))
+		pq"$alias @ _"
 	      }
 
 	      case _ => super.transform(tree)
@@ -234,11 +232,53 @@ object FreshMatchMacro {
       }
     }
 
-    /* Construct anonymus partial function with transformed case patterns */
-    val transformedPartialFunction = eplicitSwappingTransformer.transform(patterns.tree)
-    // println(show(transformedPartialFunction))
+    /* End of copy */
 
-    c.Expr[B](q"$transformedPartialFunction($expr)")
+    /* ListBuffer to collect all CaseDefs from applyOrElse method */
+    val caseDefs = new ListBuffer[CaseDef]() 
+    val collectCaseDefsFromApply = new Transformer {
+      override def transform(tree: Tree) = tree match
+      {
+        /* only collect from applyOrElse method */
+        case x@DefDef(_,name,_,_,_,_)
+           if name.toString == "applyOrElse"  => {
+             collectCaseDefs.transform(x)
+           }
+        case _ => super.transform(tree) 
+      }
+      /* Collect all CaseDefs and call super transformer.
+       * Has no effect on the tree itself.
+       */
+      val collectCaseDefs = new Transformer {
+        override def transformCaseDefs(trees: List[CaseDef]) = {
+          /* drop last CaseDef, because its the from compiler generated default case */
+          val userDefs = trees.take(trees.size - 1)
+          caseDefs ++= userDefs
+          super.transformCaseDefs(trees)
+        }
+      }
+    }
+    /* Transforms Fresh.Abstraction to Abstraction,
+     * because the code from FreshAnnotation expected it this way-
+     */
+    val removeSelectFreshAbstraction = new Transformer {
+      override def transform(tree: Tree) = tree match
+      {
+        case Select(Ident(name),absName) 
+            if name.toString == "Fresh" &&
+               absName.toString == "Abstraction" => Ident(absName)
+        case _ => super.transform(tree) 
+      }
+
+    }
+    /* fill caseDefs with all CaseDefs from the applyOrElse method */
+    collectCaseDefsFromApply.transform(patterns.tree)
+    val matchStmt = removeSelectFreshAbstraction.
+      transform(c.resetAllAttrs(
+        q""" $expr match { case ..$caseDefs}"""))
+    /* Construct definition with transformed case patterns */
+    val transformedMatch = eplicitSwappingTransformer.transform(matchStmt)
+    c.Expr[B](transformedMatch)
   }
 
 }
