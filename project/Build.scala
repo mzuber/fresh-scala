@@ -25,7 +25,7 @@ object FreshScalaBuild extends Build {
     "root",
     file("."),
     settings = buildSettings
-  ) aggregate(core, examples)
+  ) aggregate(core, examples, benchmark)
 
   lazy val core: Project = Project(
     "core",
@@ -43,6 +43,12 @@ object FreshScalaBuild extends Build {
   lazy val examples: Project = Project(
     "examples",
     file("examples"),
+    settings = buildSettings
+  ) dependsOn(core)
+
+  lazy val benchmark: Project = Project(
+    "benchmark",
+    file("benchmark"),
     settings = buildSettings
   ) dependsOn(core)
 }
