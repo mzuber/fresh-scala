@@ -62,8 +62,7 @@ object Example {
     * obtained by capture-avoiding substitution of the term 'e1' for all
     * free occurrences of the variable 'x' in the term 'e2'.
     */
-  @Fresh
-  def subst(e1: Term, x: Name[Var], e2: Term): Term = e2 match {
+  def subst(e1: Term, x: Name[Var], e2: Term): Term = freshMatch(e2) {
     case Variable(y) => if (x == y) e1 else Variable(y)
     case Function(Abstraction(y, e)) => Function(Abstraction(y, subst(e1, x, e)))
     case Application(f, e) => Application(subst(e1, x, f), subst(e1, x, e))
@@ -84,13 +83,13 @@ object Example {
   def substExpl(e1: Term, x: Name[Var], e2: Term): Term = e2 match {
     case Variable(y) => if (x == y) e1 else Variable(y)
     case Function(Abstraction(y, e)) => {
-      val z: Name[Var] = fresh() // Or: z.refresh()
+      val z: Name[Var] = fresh() // Or: y.refresh()
       Function(<<(z)>> substExpl(e1, x, swap(z, y, e)))
     }
     case Application(f, e) => Application(substExpl(e1, x, f), substExpl(e1, x, e))
     case LetFunction(Abstraction(f, (Abstraction(y, e), body))) => {
       val g: Name[Var] = fresh() // Or: f.refresh()
-      val z: Name[Var] = fresh() // Or: z.refresh()
+      val z: Name[Var] = fresh() // Or: y.refresh()
       LetFunction(<<(g)>> swap(g, f, (<<(z)>> substExpl(e1, x, swap(z, y, e)), substExpl(e1, x, body))))
     }
   }
@@ -110,7 +109,9 @@ object Example {
   }
 
 
-
+  /**
+    * Example usage of the functions defined above.
+    */
   def test() = {
     val x: Name[Var] = fresh()
     val y: Name[Var] = fresh()
