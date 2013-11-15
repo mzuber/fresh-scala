@@ -58,7 +58,7 @@ object BenchmarkDataGenerator {
     /**
       * Fresh-ML representation of the `Term' data type.
       */
-    def mlDataType: String = """ mlCode: String = type t and var = t name;;
+    def mlDataType: String = """ type t and var = t name;;
                                  type term = Var of var | Fn of <<var>>term | App of term * term;;"""
 
     /**
