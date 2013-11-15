@@ -230,10 +230,7 @@ object Fresh {
 
         if (c1.size != c2.size) false
         else if (c1.size == 0) t1 == t2
-	// TODO: Can this be rewritten using aggregate?
-        else (c1, c2).zipped.foldLeft(true) {
-	  case (acc, (x, y)) => acc && structuralEquality(x, y)
-	}
+        else (c1, c2).zipped.map(structuralEquality).forall(x => x)
       }
 
       /* Otherwise, the two terms are not structurally equal */
