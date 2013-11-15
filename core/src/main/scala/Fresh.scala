@@ -32,8 +32,6 @@
 import scala.language.experimental.macros
 import scala.annotation.StaticAnnotation
 
-import org.kiama.rewriting.Rewriter._
-
 import AtomSupply.freshAtom
 import FreshMatchMacro.freshMatchImpl
 import FreshAnnotation.freshAnnotationImpl
@@ -54,7 +52,7 @@ object Fresh {
   /**
     * A class for bindable names in the object language.
     */
-  case class Name[A](atom: Atom) {
+  sealed case class Name[A](atom: Atom) {
 
     /**
       * Check, if this bindable name occurs in the algebraic support of the given expression.
@@ -62,6 +60,7 @@ object Fresh {
       * This method provides a 'not-a-free-variable-of' test for object-level terms.
       */
     def freshfor[B](expr: B): Boolean = {
+      import org.kiama.rewriting.Rewriter.collects
 
       def boundNames = collects {
 	case abstraction: Abstraction[A, _] => abstraction.boundName
@@ -140,7 +139,15 @@ object Fresh {
     * Interchange all occurrences of the given atoms in an expression, i.e.,
     * replace every occurrence of the first atom with the second one and vice versa.
     */
-  def swap[A, B](a: Name[A], b: Name[A], expr: B): B = {
+  def swap[A, B](a: Name[A], b: Name[A], expr: B): B = swapKiama(a, b, expr)
+
+
+  /**
+    * Swap bindable names in an expression using Kiama's term rewriting library.
+    */
+  def swapKiama[A, B](a: Name[A], b: Name[A], expr: B): B = {
+    import org.kiama.rewriting.Rewriter.{rule, everywhere}
+
     // Define a Kiama strategy which replaces every atom `a' with `b' and every atom `b' with `a'
     val swap = rule {
       case atom: Name[A] if atom == a => b
@@ -198,6 +205,7 @@ object Fresh {
     * using data-type generic programming.
     */
   def structuralEquality[A](e1: A, e2: A): Boolean = {
+    import org.kiama.rewriting.Rewriter._
 
     /* Get the children of the given term. */
     def getChildren(term: Any): List[Any] = {
@@ -215,12 +223,12 @@ object Fresh {
        * If both terms are abstraction values, we swap every occurrence
        * of `x1' in `e1' with `x2' and compare the result to `e2'.
        */
-      case (Abstraction(x1, e1), Abstraction(x2, e2)) => structuralEquality(swap(x1 ,x2 ,e1 ), e2)
+      case (Abstraction(x1, e1), Abstraction(x2, e2)) => structuralEquality(swap(x1, x2, e1), e2)
 
       /*
        * Generic comparison of two terms.
        * Two terms are equal if:
-       * - they are instances of the class
+       * - they are instances of the same class
        * - have the same number of children
        * - all children are equal to their matching counterpart
        */
