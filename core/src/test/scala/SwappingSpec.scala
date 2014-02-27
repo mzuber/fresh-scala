@@ -29,11 +29,55 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import org.scalatest.FunSpec
+
+import Fresh._
+import ObjectLanguage._
+
 
 /**
-  * Tests for the Kiama-based swap implementation.
+  * Test spec for swapping atoms.
   */
-class KiamaSwappingTests extends SwappingSpec {
+trait SwappingSpec extends FunSpec {
 
-  def testedImplementation = "Kiama-based `swap' implementation"
+  val test = it
+
+  /**
+    * Description for the used `swap' implementation.
+    */
+  def testedImplementation: String
+
+
+  /* Test fixtures: Some fresh names */
+  val x: Name[Ide] = fresh()
+  val y: Name[Ide] = fresh()
+  val z: Name[Ide] = fresh()
+
+
+  describe("Testing " + testedImplementation) { 
+
+    test("swapping x and y in <<x>>y should result in <<y>>x") {
+      assert(swap(x, y, <<(x)>> y) === <<(y)>> x)
+    }
+
+    test("swapping x and z in <<x>>y should result in <<z>>y") {
+      assert(swap(x, z, <<(x)>> y) === <<(z)>> y)
+    }
+
+    test("swapping x and y in <<z>>z should result in <<z>>z") {
+      assert(swap(x, y, <<(z)>> z) === <<(z)>> z)
+    }
+
+    test("swapping x and y in <<x>>(<<y>>x) should result in <<y>>(<<x>>y)") {
+      assert(swap(x, y, <<(x)>>(<<(y)>> x)) === <<(y)>>(<<(x)>> y))
+    }
+
+    test("swapping y and z in Fun(<<(y)>> Var(x)) should result in Fun(<<(z)>> Var(x))") {
+      assert(swap(y, z, Fun(<<(y)>> Var(x))) === Fun(<<(z)>> Var(x)))
+    }
+
+    test("swapping [x,y] and [z,z] in App(Var(x), Var(y)) should result in App(Var(z), Var(z))") {
+      assert(Fresh.swap(List(x,y), List(z,z), App(Var(x), Var(y))) === App(Var(y), Var(z)))
+    }
+  }    
 }

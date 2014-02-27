@@ -139,13 +139,7 @@ object Fresh {
     * Interchange all occurrences of the given atoms in an expression, i.e.,
     * replace every occurrence of the first atom with the second one and vice versa.
     */
-  def swap[A, B](a: Name[A], b: Name[A], expr: B): B = swapKiama(a, b, expr)
-
-
-  /**
-    * Swap bindable names in an expression using Kiama's term rewriting library.
-    */
-  def swapKiama[A, B](a: Name[A], b: Name[A], expr: B): B = {
+  def swap[A, B](a: Name[A], b: Name[A], expr: B): B = {
     import org.kiama.rewriting.Rewriter.{rule, everywhere}
 
     // Define a Kiama strategy which replaces every atom `a' with `b' and every atom `b' with `a'

@@ -15,6 +15,7 @@ object Dependencies {
   val reflect = (scalaVersion)("org.scala-lang" % "scala-reflect" % _)
   val scalatest = "org.scalatest" % "scalatest_2.10" % "2.0.M5b"
   val kiama = "com.googlecode.kiama" %% "kiama" % "1.5.1"
+  val shapeless = "com.chuusai" % "shapeless_2.10.2" % "2.0.0-M1"
 }
 
 object FreshScalaBuild extends Build {
@@ -36,7 +37,8 @@ object FreshScalaBuild extends Build {
       parallelExecution in Test := false,
       libraryDependencies <+= reflect,
       libraryDependencies += scalatest,
-      libraryDependencies += kiama
+      libraryDependencies += kiama,
+      libraryDependencies += shapeless
     )
   )
 
