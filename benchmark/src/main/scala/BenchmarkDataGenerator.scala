@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2013, Martin Zuber
  * All rights reserved.
